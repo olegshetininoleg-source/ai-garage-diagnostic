@@ -1,7 +1,7 @@
 import os
-import wave
 import numpy as np
 from flask import Flask, request, jsonify, render_template, send_from_directory
+from pydub import AudioSegment
 from pipeline import EngineAnalyzer
 from pdf_maker import generate_report
 
@@ -20,26 +20,38 @@ def home(): return render_template("index.html")
 def analyze():
     if "file" not in request.files: return jsonify({"error": "No file"}), 400
     file = request.files["file"]
+    
     try:
-        wav_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp.wav")
-        file.save(wav_path)
-        with wave.open(wav_path, 'rb') as wf:
-            frames = wf.readframes(wf.getnframes())
-            audio = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
-            if wf.getnchannels() > 1: audio = audio.reshape(-1, wf.getnchannels()).mean(axis=1)
-            sr = wf.getframerate()
+        # 1. Сохраняем временный файл
+        ext = os.path.splitext(file.filename)[1].lower()
+        raw_path = os.path.join(app.config['UPLOAD_FOLDER'], f"raw_audio{ext}")
+        file.save(raw_path)
 
-        result = analyzer.process(audio, sr)
+        # 2. Конвертируем в WAV (теперь это сработает!)
+        audio_segment = AudioSegment.from_file(raw_path)
+        audio_segment = audio_segment.set_channels(1).set_frame_rate(22050)
         
-        # Генерация PDF с учетом рекомендации
+        # Переводим в массив numpy для анализа
+        samples = np.array(audio_segment.get_array_of_samples()).astype(np.float32)
+        # Нормализация громкости
+        if audio_segment.sample_width == 2:
+            samples /= 32768.0
+        elif audio_segment.sample_width == 4:
+            samples /= 2147483648.0
+
+        # 3. Анализируем
+        result = analyzer.process(samples, 22050)
+        
+        # 4. Генерируем PDF
         pdf_name = f"Report_{int(result['rpm'])}.pdf"
         pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_name)
         generate_report(result['rpm'], result['type'], result['probabilities'], result['recommendation'], pdf_path)
         
         result['pdf_url'] = f"/download/{pdf_name}"
         return jsonify(result)
+
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": f"Format error: {str(e)}. Try uploading a WAV or MP3."}), 500
 
 @app.route('/download/<filename>')
 def download_file(filename):
