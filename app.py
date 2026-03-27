@@ -18,7 +18,7 @@ def analyze():
     file = request.files["file"]
     
     try:
-        # Читаем WAV файл напрямую
+        # Читаем WAV напрямую
         with wave.open(file, 'rb') as wf:
             sr = wf.getframerate()
             n_channels = wf.getnchannels()
@@ -31,7 +31,7 @@ def analyze():
         return jsonify(result)
 
     except Exception as e:
-        return jsonify({"error": f"Upload only .WAV files. Error: {str(e)}"}), 500
+        return jsonify({"error": f"Error: {str(e)}. Use only .WAV files!"}), 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
