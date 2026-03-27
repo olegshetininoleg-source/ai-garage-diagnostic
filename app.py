@@ -2,7 +2,6 @@ import os
 import wave
 import numpy as np
 from flask import Flask, request, jsonify, render_template, send_from_directory
-from pydub import AudioSegment
 from pipeline import EngineAnalyzer
 from pdf_maker import generate_report
 
@@ -21,7 +20,6 @@ def home():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
     
@@ -30,20 +28,19 @@ def analyze():
         return jsonify({"error": "No file selected"}), 400
 
     try:
-        temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
-        file.save(temp_path)
-
+        # Сохраняем файл (поддерживаем только .wav для легкости)
         wav_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_audio.wav")
-        # Конвертируем звук в легкий формат
-        audio_segment = AudioSegment.from_file(temp_path)
-        audio_segment = audio_segment.set_channels(1).set_frame_rate(22050)
-        audio_segment.export(wav_path, format="wav")
+        file.save(wav_path)
 
-        # Читаем звук легким способом (чтобы сервер не упал в обморок)
+        # Читаем звук максимально легким способом
         with wave.open(wav_path, 'rb') as wf:
+            n_channels = wf.getnchannels()
             sr = wf.getframerate()
-            audio_data = wf.readframes(wf.getnframes())
-            audio = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+            frames = wf.readframes(wf.getnframes())
+            audio = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+            # Если стерео — делаем моно
+            if n_channels > 1:
+                audio = audio.reshape(-1, n_channels).mean(axis=1)
 
         result = analyzer.process(audio, sr)
         
