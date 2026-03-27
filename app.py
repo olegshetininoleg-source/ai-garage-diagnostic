@@ -18,7 +18,7 @@ def analyze():
     file = request.files["file"]
     
     try:
-        # Читаем WAV напрямую из памяти
+        # Читаем WAV файл напрямую
         with wave.open(file, 'rb') as wf:
             sr = wf.getframerate()
             n_channels = wf.getnchannels()
