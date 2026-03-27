@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Garage | Engine Sound Diagnostics</title>
+    <title>AI-Garage | Expert Engine Diagnostics</title>
     <style>
-        /* Современный темный дизайн "под гараж/диагностику" */
         body {
             font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             background-color: #121212;
@@ -25,17 +24,10 @@
             width: 100%;
             text-align: center;
         }
-        h1 {
-            color: #00d2ff;
-            margin-bottom: 5px;
-        }
-        p.subtitle {
-            color: #888;
-            margin-bottom: 30px;
-        }
-        input[type="file"] {
-            display: none;
-        }
+        h1 { color: #00d2ff; margin-bottom: 5px; }
+        p.subtitle { color: #888; margin-bottom: 30px; }
+        input[type="file"] { display: none; }
+        
         .file-upload-label {
             display: inline-block;
             background-color: #333;
@@ -45,12 +37,10 @@
             cursor: pointer;
             border: 2px dashed #555;
             transition: 0.3s;
-            width: 80%;
+            width: 85%;
         }
-        .file-upload-label:hover {
-            border-color: #00d2ff;
-            background-color: #2a2a2a;
-        }
+        .file-upload-label:hover { border-color: #00d2ff; background-color: #2a2a2a; }
+
         .submit-btn {
             background-color: #00d2ff;
             color: #000;
@@ -64,15 +54,10 @@
             transition: 0.3s;
             width: 100%;
         }
-        .submit-btn:hover {
-            background-color: #00a8cc;
-        }
-        #loading {
-            display: none;
-            margin-top: 25px;
-            color: #f39c12;
-            font-weight: bold;
-        }
+        .submit-btn:hover { background-color: #00a8cc; transform: translateY(-2px); }
+
+        #loading { display: none; margin-top: 25px; color: #f39c12; font-weight: bold; }
+
         #result-card {
             display: none;
             margin-top: 30px;
@@ -82,24 +67,44 @@
             border-left: 5px solid #00d2ff;
             text-align: left;
         }
-        .result-item {
-            margin: 10px 0;
-            font-size: 18px;
-        }
-        .highlight {
-            color: #00d2ff;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-        
-        /* НОВЫЕ СТИЛИ ДЛЯ ГРАФИКОВ-ШКАЛ */
+
+        .result-item { margin: 10px 0; font-size: 18px; }
+        .highlight { color: #00d2ff; font-weight: bold; text-transform: uppercase; }
+
+        /* Шкалы */
         .bars-wrapper { margin-top: 15px; }
         .bar-row { margin-bottom: 12px; }
-        .bar-label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; color: #ccc;}
+        .bar-label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; color: #ccc; }
         .bar-container { background-color: #333; border-radius: 4px; overflow: hidden; height: 8px; }
         .bar-fill { height: 100%; background-color: #00d2ff; width: 0%; transition: width 1s ease-in-out; }
-        .bar-fill.high { background-color: #ff4757; } /* Красный для опасных вероятностей */
-        .bar-fill.med { background-color: #ffa502; } /* Желтый для средних */
+        
+        /* Цвета шкал */
+        .bar-fill.high { background-color: #ff4757; } 
+        .bar-fill.med { background-color: #ffa502; }
+        .bar-fill.safe { background-color: #2ed573; } /* Зеленый для нормы */
+
+        /* Блок рекомендации */
+        #recommendation-box {
+            margin-top: 25px;
+            padding: 15px;
+            background: #1a3a4a;
+            border-radius: 8px;
+            border: 1px solid #00d2ff;
+        }
+        #rec-text { font-style: italic; color: #fff; margin-bottom: 15px; }
+        
+        .amazon-btn {
+            display: block;
+            background-color: #ff9900;
+            color: #000;
+            text-decoration: none;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            text-align: center;
+            transition: 0.3s;
+        }
+        .amazon-btn:hover { background-color: #e68a00; }
     </style>
 </head>
 <body>
@@ -110,22 +115,26 @@
 
         <form id="uploadForm">
             <label class="file-upload-label" for="audioFile" id="fileLabel">
-                📁 Click to Select Audio/Video File
+                📁 Click to Select Engine Sound
             </label>
             <input type="file" id="audioFile" name="file" accept="audio/*,video/*" required>
-            
             <button type="submit" class="submit-btn">Run AI Analysis</button>
         </form>
 
-        <div id="loading">⏳ Analyzing sound frequencies... Please wait.</div>
+        <div id="loading">⏳ Processing spectral data...</div>
 
         <div id="result-card">
-            <div class="result-item">Primary Diagnosis: <span id="res-type" class="highlight"></span></div>
-            <div class="result-item">Detected RPM: <span id="res-rpm" style="color: #fff;"></span></div>
+            <div class="result-item">Diagnosis: <span id="res-type" class="highlight"></span></div>
+            <div class="result-item">RPM: <span id="res-rpm" style="color: #fff; font-weight: bold;"></span></div>
             
-            <h3 style="margin-top: 20px; color: #888; font-size: 16px; border-bottom: 1px solid #444; padding-bottom: 5px;">Diagnostic Confidence Scale</h3>
-            <div id="probability-bars" class="bars-wrapper">
-                </div>
+            <h3 style="margin-top: 20px; color: #888; font-size: 14px; text-transform: uppercase;">Confidence Matrix</h3>
+            <div id="probability-bars" class="bars-wrapper"></div>
+
+            <div id="recommendation-box">
+                <h4 style="margin: 0 0 10px 0; color: #00d2ff;">AI Expert Advice:</h4>
+                <p id="rec-text"></p>
+                <a id="buy-link" href="#" target="_blank" class="amazon-btn">🛒 Find Parts on Amazon</a>
+            </div>
         </div>
     </div>
 
@@ -137,71 +146,3 @@
 
         document.getElementById('uploadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            let fileInput = document.getElementById('audioFile');
-            if (fileInput.files.length === 0) return;
-
-            let formData = new FormData();
-            formData.append("file", fileInput.files[0]);
-
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('result-card').style.display = 'none';
-
-            try {
-                let response = await fetch('/analyze', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                let data = await response.json();
-                document.getElementById('loading').style.display = 'none';
-
-                if (data.error) {
-                    alert("Error: " + data.error);
-                    return;
-                }
-
-                // Очищаем контейнер перед новой отрисовкой
-                let barsContainer = document.getElementById('probability-bars');
-                barsContainer.innerHTML = '';
-
-                // Отрисовываем новые красивые шкалы
-                if (data.probabilities) {
-                    for (const [issue, percent] of Object.entries(data.probabilities)) {
-                        // Убираем подчеркивания и делаем первую букву большой
-                        let cleanName = issue.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                        
-                        // Выбираем цвет: больше 60% красный, больше 30% желтый
-                        let colorClass = percent >= 60 ? 'high' : (percent >= 30 ? 'med' : '');
-
-                        let barHtml = `
-                            <div class="bar-row">
-                                <div class="bar-label">
-                                    <span>${cleanName}</span>
-                                    <span>${percent}%</span>
-                                </div>
-                                <div class="bar-container">
-                                    <div class="bar-fill ${colorClass}" style="width: ${percent}%"></div>
-                                </div>
-                            </div>
-                        `;
-                        barsContainer.innerHTML += barHtml;
-                    }
-                }
-
-                // Заполняем основные данные
-                let displayType = data.type.replace(/_/g, ' ').toUpperCase();
-                document.getElementById('res-type').innerText = displayType;
-                document.getElementById('res-rpm').innerText = data.rpm;
-                
-                document.getElementById('result-card').style.display = 'block';
-
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('loading').style.display = 'none';
-                alert("Something went wrong with the connection.");
-            }
-        });
-    </script>
-</body>
-</html>
