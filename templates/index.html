@@ -3,146 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Garage | Expert Engine Diagnostics</title>
+    <title>AI-Garage | Expert Engine Analysis</title>
     <style>
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212;
-            color: #e0e0e0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-        .container {
-            background-color: #1e1e1e;
-            padding: 40px;
-            border-radius: 12px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-        }
-        h1 { color: #00d2ff; margin-bottom: 5px; }
-        p.subtitle { color: #888; margin-bottom: 30px; }
-        input[type="file"] { display: none; }
-        
-        .file-upload-label {
-            display: inline-block;
-            background-color: #333;
-            color: #fff;
-            padding: 15px 30px;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 2px dashed #555;
-            transition: 0.3s;
-            width: 85%;
-        }
-        .file-upload-label:hover { border-color: #00d2ff; background-color: #2a2a2a; }
-
-        .submit-btn {
-            background-color: #00d2ff;
-            color: #000;
-            border: none;
-            padding: 15px 40px;
-            border-radius: 8px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: 0.3s;
-            width: 100%;
-        }
-        .submit-btn:hover { background-color: #00a8cc; transform: translateY(-2px); }
-
-        #loading { display: none; margin-top: 25px; color: #f39c12; font-weight: bold; }
-
-        #result-card {
-            display: none;
-            margin-top: 30px;
-            background-color: #2a2a2a;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 5px solid #00d2ff;
-            text-align: left;
-        }
-
-        .result-item { margin: 10px 0; font-size: 18px; }
-        .highlight { color: #00d2ff; font-weight: bold; text-transform: uppercase; }
-
-        /* Шкалы */
-        .bars-wrapper { margin-top: 15px; }
-        .bar-row { margin-bottom: 12px; }
-        .bar-label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; color: #ccc; }
-        .bar-container { background-color: #333; border-radius: 4px; overflow: hidden; height: 8px; }
-        .bar-fill { height: 100%; background-color: #00d2ff; width: 0%; transition: width 1s ease-in-out; }
-        
-        /* Цвета шкал */
-        .bar-fill.high { background-color: #ff4757; } 
-        .bar-fill.med { background-color: #ffa502; }
-        .bar-fill.safe { background-color: #2ed573; } /* Зеленый для нормы */
-
-        /* Блок рекомендации */
-        #recommendation-box {
-            margin-top: 25px;
-            padding: 15px;
-            background: #1a3a4a;
-            border-radius: 8px;
-            border: 1px solid #00d2ff;
-        }
-        #rec-text { font-style: italic; color: #fff; margin-bottom: 15px; }
-        
-        .amazon-btn {
-            display: block;
-            background-color: #ff9900;
-            color: #000;
-            text-decoration: none;
-            padding: 10px;
-            border-radius: 5px;
-            font-weight: bold;
-            text-align: center;
-            transition: 0.3s;
-        }
-        .amazon-btn:hover { background-color: #e68a00; }
+        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; min-height: 100vh; margin: 0; padding-top: 50px;}
+        .container { background: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); max-width: 450px; width: 100%; text-align: center; }
+        h1 { color: #00d2ff; }
+        .file-label { display: block; background: #333; padding: 20px; border: 2px dashed #555; border-radius: 8px; cursor: pointer; margin-bottom: 20px; }
+        .btn { background: #00d2ff; color: #000; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; }
+        #result-card { display: none; margin-top: 25px; text-align: left; background: #2a2a2a; padding: 20px; border-radius: 8px; border-left: 4px solid #00d2ff; }
+        .bar-container { background: #444; height: 10px; border-radius: 5px; margin-bottom: 15px; overflow: hidden; }
+        .bar-fill { height: 100%; background: #00d2ff; width: 0; transition: width 1s; }
+        .bar-fill.safe { background: #2ed573; }
+        .bar-fill.warn { background: #ff4757; }
+        .amazon-btn { display: block; background: #ff9900; color: #000; text-decoration: none; padding: 12px; border-radius: 5px; font-weight: bold; text-align: center; margin-top: 15px; }
     </style>
 </head>
 <body>
-
     <div class="container">
         <h1>AI-Garage</h1>
-        <p class="subtitle">Neural Network Engine Sound Analysis</p>
-
+        <p>Upload a <b>.WAV</b> file for AI diagnostics</p>
         <form id="uploadForm">
-            <label class="file-upload-label" for="audioFile" id="fileLabel">
-                📁 Click to Select Engine Sound
-            </label>
-            <input type="file" id="audioFile" name="file" accept="audio/*,video/*" required>
-            <button type="submit" class="submit-btn">Run AI Analysis</button>
+            <label class="file-label" for="audioFile" id="fileLabel">📁 Click to select audio</label>
+            <input type="file" id="audioFile" name="file" accept=".wav" style="display:none" required>
+            <button type="submit" class="btn">START ANALYSIS</button>
         </form>
-
-        <div id="loading">⏳ Processing spectral data...</div>
-
+        <div id="loading" style="display:none; margin-top:20px;">⏳ Analyzing...</div>
         <div id="result-card">
-            <div class="result-item">Diagnosis: <span id="res-type" class="highlight"></span></div>
-            <div class="result-item">RPM: <span id="res-rpm" style="color: #fff; font-weight: bold;"></span></div>
-            
-            <h3 style="margin-top: 20px; color: #888; font-size: 14px; text-transform: uppercase;">Confidence Matrix</h3>
-            <div id="probability-bars" class="bars-wrapper"></div>
-
-            <div id="recommendation-box">
-                <h4 style="margin: 0 0 10px 0; color: #00d2ff;">AI Expert Advice:</h4>
-                <p id="rec-text"></p>
-                <a id="buy-link" href="#" target="_blank" class="amazon-btn">🛒 Find Parts on Amazon</a>
+            <h3>Result: <span id="res-type" style="color:#00d2ff"></span></h3>
+            <p>Detected RPM: <b id="res-rpm"></b></p>
+            <div id="bars"></div>
+            <div style="background:#1a3a4a; padding:15px; border-radius:5px; margin-top:15px;">
+                <small>Expert Advice:</small>
+                <p id="res-rec" style="font-size:14px; margin:5px 0;"></p>
+                <a id="amazon-link" href="#" target="_blank" class="amazon-btn">Find Parts on Amazon</a>
             </div>
         </div>
     </div>
-
     <script>
-        document.getElementById('audioFile').addEventListener('change', function(e) {
-            let fileName = e.target.files[0].name;
-            document.getElementById('fileLabel').innerText = "📄 " + fileName;
-        });
-
-        document.getElementById('uploadForm').addEventListener('submit', async function(e) {
+        document.getElementById('audioFile').onchange = e => { document.getElementById('fileLabel').innerText = "📄 " + e.target.files[0].name; };
+        document.getElementById('uploadForm').onsubmit = async e => {
             e.preventDefault();
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result-card').style.display = 'none';
+            let formData = new FormData();
+            formData.append("file", document.getElementById('audioFile').files[0]);
+            let res = await fetch('/analyze', { method: 'POST', body: formData });
+            let data = await res.json();
+            document.getElementById('loading').style.display = 'none';
+            if(data.error) { alert(data.error); return; }
+            document.getElementById('res-type').innerText = data.type.replace('_',' ').toUpperCase();
+            document.getElementById('res-rpm').innerText = data.rpm;
+            document.getElementById('res-rec').innerText = data.recommendation;
+            document.getElementById('amazon-link').href = "https://www.amazon.com/s?k=" + data.type.replace('_','+') + "+repair+parts";
+            let barsHtml = '';
+            for (const [name, val] of Object.entries(data.probabilities)) {
+                let color = (name === 'normal_operation') ? 'safe' : (val > 50 ? 'warn' : '');
+                barsHtml += `<small>${name.replace('_',' ')}: ${val}%</small><div class="bar-container"><div class="bar-fill ${color}" style="width:${val}%"></div></div>`;
+            }
+            document.getElementById('bars').innerHTML = barsHtml;
+            document.getElementById('result-card').style.display = 'block';
+        };
+    </script>
+</body>
+</html>
