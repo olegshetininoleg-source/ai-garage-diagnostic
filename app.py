@@ -1,4 +1,20 @@
+import os
+import wave
 import numpy as np
+from flask import Flask, request, jsonify, render_template
+from pipeline import EngineAnalyzer
+
+# Создаем приложение (важно, чтобы это было в самом верху!)
+app = Flask(__name__)
+application = app  # Добавили запасное имя для сервера
+
+analyzer = EngineAnalyzer()
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+# ... (весь остальной код без изменений)import numpy as np
 
 class EngineAnalyzer:
     def process(self, audio, sr=22050):
