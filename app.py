@@ -41,4 +41,7 @@ def analyze():
 
 # Запуск сервера
 if __name__ == "__main__":
-    app.run(debug=True)
+    import os
+    # Берем порт, который дает нам облачный сервис (по умолчанию 5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
