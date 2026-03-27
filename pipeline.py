@@ -1,6 +1,5 @@
 import numpy as np
 
-# Формула вычисления оборотов теперь живет прямо здесь!
 def estimate_rpm(audio, sr=22050):
     frequencies = np.fft.rfftfreq(len(audio), d=1/sr)
     amplitudes = np.abs(np.fft.rfft(audio))
@@ -20,13 +19,11 @@ def estimate_rpm(audio, sr=22050):
 
     return rpm, dominant_freq
 
-# Основной анализатор
 class EngineAnalyzer:
     def __init__(self):
         pass
 
     def process(self, audio, sr=22050):
-        # Вызываем формулу, которая находится выше
         rpm, freq = estimate_rpm(audio, sr)
         
         diag_type = "normal_operation"
@@ -39,6 +36,7 @@ class EngineAnalyzer:
         else:
             diag_type = "noise_detected"
 
+        # Вот этот словарь, из-за которого всё падало!
         result = {
             "type": diag_type,
             "rpm": rpm,
