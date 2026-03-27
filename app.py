@@ -1,7 +1,7 @@
 import os
+import wave
 import numpy as np
 from flask import Flask, request, jsonify, render_template, send_from_directory
-from pydub import AudioSegment
 from pipeline import EngineAnalyzer
 from pdf_maker import generate_report
 
@@ -22,27 +22,26 @@ def analyze():
     file = request.files["file"]
     
     try:
-        # 1. Сохраняем временный файл
-        ext = os.path.splitext(file.filename)[1].lower()
-        raw_path = os.path.join(app.config['UPLOAD_FOLDER'], f"raw_audio{ext}")
-        file.save(raw_path)
+        # Сохраняем файл
+        temp_name = "temp_audio.wav"
+        wav_path = os.path.join(app.config['UPLOAD_FOLDER'], temp_name)
+        file.save(wav_path)
 
-        # 2. Конвертируем в WAV (теперь это сработает!)
-        audio_segment = AudioSegment.from_file(raw_path)
-        audio_segment = audio_segment.set_channels(1).set_frame_rate(22050)
-        
-        # Переводим в массив numpy для анализа
-        samples = np.array(audio_segment.get_array_of_samples()).astype(np.float32)
-        # Нормализация громкости
-        if audio_segment.sample_width == 2:
-            samples /= 32768.0
-        elif audio_segment.sample_width == 4:
-            samples /= 2147483648.0
+        # Проверка формата (только WAV)
+        try:
+            with wave.open(wav_path, 'rb') as wf:
+                n_channels = wf.getnchannels()
+                sr = wf.getframerate()
+                frames = wf.readframes(wf.getnframes())
+                audio = np.frombuffer(frames, dtype=np.int16).astype(np.float32) / 32768.0
+                if n_channels > 1:
+                    audio = audio.reshape(-1, n_channels).mean(axis=1)
+        except Exception:
+            return jsonify({"error": "Please upload a .WAV file. MP3/Video is not supported on free server yet."}), 400
 
-        # 3. Анализируем
-        result = analyzer.process(samples, 22050)
+        result = analyzer.process(audio, sr)
         
-        # 4. Генерируем PDF
+        # Генерируем PDF
         pdf_name = f"Report_{int(result['rpm'])}.pdf"
         pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_name)
         generate_report(result['rpm'], result['type'], result['probabilities'], result['recommendation'], pdf_path)
@@ -51,7 +50,7 @@ def analyze():
         return jsonify(result)
 
     except Exception as e:
-        return jsonify({"error": f"Format error: {str(e)}. Try uploading a WAV or MP3."}), 500
+        return jsonify({"error": f"Internal error: {str(e)}"}), 500
 
 @app.route('/download/<filename>')
 def download_file(filename):
