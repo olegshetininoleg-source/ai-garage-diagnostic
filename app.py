@@ -1,13 +1,13 @@
 import os
+import wave
+import numpy as np
 from flask import Flask, request, jsonify, render_template, send_from_directory
-import librosa
 from pydub import AudioSegment
 from pipeline import EngineAnalyzer
 from pdf_maker import generate_report
 
 app = Flask(__name__)
 
-# Бронебойное создание папки с абсолютным путем
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_FOLDER = os.path.join(BASE_DIR, 'uploads')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -21,9 +21,7 @@ def home():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
-    # На всякий случай проверяем папку прямо перед сохранением
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
     
@@ -32,26 +30,27 @@ def analyze():
         return jsonify({"error": "No file selected"}), 400
 
     try:
-        # Сохраняем оригинал
-        ext = os.path.splitext(file.filename)[1].lower()
         temp_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(temp_path)
 
-        # Конвертируем
         wav_path = os.path.join(app.config['UPLOAD_FOLDER'], "temp_audio.wav")
-        audio_converted = AudioSegment.from_file(temp_path)
-        audio_converted.export(wav_path, format="wav")
+        # Конвертируем звук в легкий формат
+        audio_segment = AudioSegment.from_file(temp_path)
+        audio_segment = audio_segment.set_channels(1).set_frame_rate(22050)
+        audio_segment.export(wav_path, format="wav")
 
-        # Анализируем
-        audio, sr = librosa.load(wav_path, sr=22050)
-        result = analyzer.process(audio)
+        # Читаем звук легким способом (чтобы сервер не упал в обморок)
+        with wave.open(wav_path, 'rb') as wf:
+            sr = wf.getframerate()
+            audio_data = wf.readframes(wf.getnframes())
+            audio = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768.0
+
+        result = analyzer.process(audio, sr)
         
-        # Генерируем PDF
         pdf_name = f"Report_{int(result['rpm'])}.pdf"
         pdf_path = os.path.join(app.config['UPLOAD_FOLDER'], pdf_name)
         generate_report(result['rpm'], result['type'], result['probabilities'], pdf_path)
         
-        # Отдаем ссылку
         result['pdf_url'] = f"/download/{pdf_name}"
         return jsonify(result)
         
