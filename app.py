@@ -68,5 +68,11 @@ def download_file(filename):
 
 if __name__ == "__main__":
     import os
+<<<<<<< HEAD
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+=======
+    # Берем порт, который дает нам облачный сервис (по умолчанию 5000)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
+>>>>>>> b8c4ec49886f9c47b49c0ebef0736bbd8cda6454

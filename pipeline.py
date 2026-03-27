@@ -1,28 +1,44 @@
 import numpy as np
-from rpm import estimate_rpm
 
+# Формула вычисления оборотов теперь живет прямо здесь!
+def estimate_rpm(audio, sr=22050):
+    frequencies = np.fft.rfftfreq(len(audio), d=1/sr)
+    amplitudes = np.abs(np.fft.rfft(audio))
+    
+    min_index = np.searchsorted(frequencies, 10)
+    
+    if min_index < len(amplitudes):
+        peak_index = np.argmax(amplitudes[min_index:]) + min_index
+        dominant_freq = frequencies[peak_index]
+    else:
+        dominant_freq = 0
+
+    rpm = dominant_freq * 60
+    
+    if rpm < 500 or rpm > 8000:
+        rpm = 800
+
+    return rpm, dominant_freq
+
+# Основной анализатор
 class EngineAnalyzer:
     def __init__(self):
-        # Теперь нам не нужен joblib.load, мы работаем на физике звука
         pass
 
     def process(self, audio, sr=22050):
-        # 1. Считаем обороты нашим бронебойным методом
+        # Вызываем формулу, которая находится выше
         rpm, freq = estimate_rpm(audio, sr)
         
-        # 2. Базовая логика определения проблем по частотам
-        # (Это упрощенная имитация нейросети, пока мы не накопили базу звуков)
         diag_type = "normal_operation"
         
         if rpm > 0:
-            if 10 < freq < 40: # Низкочастотный гул
+            if 10 < freq < 40:
                 diag_type = "alternator_bearing"
-            elif freq > 100: # Высокочастотный свист
+            elif freq > 100:
                 diag_type = "belt_squeal"
         else:
             diag_type = "noise_detected"
 
-        # Формируем ответ, который ждет наш app.py
         result = {
             "type": diag_type,
             "rpm": rpm,
