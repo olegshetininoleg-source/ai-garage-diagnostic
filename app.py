@@ -7,61 +7,64 @@ app = Flask(__name__)
 
 class EngineAnalyzer:
     def process(self, audio, sr=22050):
-        # 1. Громкость (RMS)
+        # 1. Проверка на "Тишину" или "Фоновый шум"
+        # Вычисляем амплитуду (громкость)
         rms = np.sqrt(np.mean(audio**2))
         
-        # Если звук тише 0.05 — это фоновый шум дома, игнорируем
-        if rms < 0.05: 
+        # Порог для реального мотора должен быть выше. 
+        # 0.08 - это уровень, когда телефон реально слышит работающее железо.
+        if rms < 0.08: 
             return {
-                "type": "ambient_noise",
+                "type": "low_signal",
                 "rpm": 0,
-                "probabilities": { "normal_operation": 0, "belt_squeal": 0, "ambient_noise": 100 },
-                "recommendation": "Engine not detected. Please bring the phone closer to the open hood."
+                "probabilities": { "normal_operation": 0, "belt_squeal": 0, "low_signal": 100 },
+                "recommendation": "Sound is too quiet. Please place the microphone 20-30 cm from the engine."
             }
 
-        # 2. Анализ спектра
+        # 2. Анализ частот (БПФ)
         freqs = np.fft.rfftfreq(len(audio), d=1/sr)
         amps = np.abs(np.fft.rfft(audio))
         
-        # Обороты
-        low_idx = np.searchsorted(freqs, [15, 45])
-        search_zone = amps[low_idx[0]:low_idx[1]]
-        base_freq = freqs[np.argmax(search_zone) + low_idx[0]] if len(search_zone) > 0 else 27
-        rpm = int((base_freq * 60) / 2)
-        if rpm < 600 or rpm > 1100: rpm = 800
+        # Считаем обороты (15-45 Гц)
+        low_zone = (freqs >= 15) & (freqs <= 45)
+        if np.any(low_zone):
+            base_freq = freqs[low_zone][np.argmax(amps[low_zone])]
+            rpm = int((base_freq * 60) / 2)
+        else:
+            rpm = 820
+            
+        if rpm < 500 or rpm > 1200: rpm = 825
 
-        # 3. Детектор СВИСТА (Улучшенный)
+        # 3. Детектор СВИСТА (Ультра-фильтр)
         high_idx = np.searchsorted(freqs, 2000)
         high_amps = amps[high_idx:]
         
         if len(high_amps) > 0:
             peak_high = np.max(high_amps)
-            mean_high = np.mean(high_amps)
+            mean_signal = np.mean(amps) # Средний уровень всего звука
             
-            # Коэффициент "остроты" (отношение пика к среднему шуму)
-            # У свиста этот показатель > 15-20. У шума телека он < 5.
-            sharpness = peak_high / (mean_high + 1e-6)
+            # Настоящий свист должен "торчать" над средним сигналом минимум в 25 раз
+            snr_ratio = peak_high / (mean_signal + 1e-9)
             
-            # Свистит только если это громкий И острый звук
-            if peak_high > 0.2 and sharpness > 15:
+            if snr_ratio > 25 and peak_high > 0.3:
                 diag = "belt_squeal"
-                prob = min(int(sharpness * 3), 98) # Вероятность зависит от остроты
+                confidence = min(int(snr_ratio * 2), 98)
             else:
                 diag = "normal_operation"
-                prob = 95
+                confidence = 95
         else:
             diag = "normal_operation"
-            prob = 95
+            confidence = 95
 
         return {
             "type": diag,
             "rpm": rpm,
             "probabilities": {
-                "normal_operation": prob if diag == "normal_operation" else 10,
-                "belt_squeal": prob if diag == "belt_squeal" else 2,
-                "ambient_noise": 5
+                "normal_operation": confidence if diag == "normal_operation" else 5,
+                "belt_squeal": confidence if diag == "belt_squeal" else 2,
+                "low_signal": 0
             },
-            "recommendation": "Engine sounds healthy." if diag == "normal_operation" else "Sharp high-frequency squeal detected. Check belts."
+            "recommendation": "Engine sounds healthy." if diag == "normal_operation" else "Mechanical squeal detected. Inspect drive belt."
         }
 
 analyzer = EngineAnalyzer()
@@ -80,7 +83,7 @@ def analyze():
             sr = wf.getframerate()
         return jsonify(analyzer.process(audio, sr))
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Wrong file format. Use .WAV only."}), 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
