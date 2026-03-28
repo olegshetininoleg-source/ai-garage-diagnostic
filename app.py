@@ -7,59 +7,67 @@ app = Flask(__name__)
 
 class EngineAnalyzer:
     def process(self, audio, sr=22050):
-        # 1. Считаем общую громкость (RMS)
+        # 1. Громкость (RMS)
         rms = np.sqrt(np.mean(audio**2))
         
-        # Если звук тише 0.03 — это тишина (подняли порог)
-        if rms < 0.03: 
+        # Если звук тише 0.05 — это фоновый шум дома, игнорируем
+        if rms < 0.05: 
             return {
                 "type": "ambient_noise",
                 "rpm": 0,
                 "probabilities": { "normal_operation": 0, "belt_squeal": 0, "ambient_noise": 100 },
-                "recommendation": "Engine not detected. Please get closer to the engine bay."
+                "recommendation": "Engine not detected. Please bring the phone closer to the open hood."
             }
 
-        # 2. Анализ частот
-        frequencies = np.fft.rfftfreq(len(audio), d=1/sr)
-        amplitudes = np.abs(np.fft.rfft(audio))
+        # 2. Анализ спектра
+        freqs = np.fft.rfftfreq(len(audio), d=1/sr)
+        amps = np.abs(np.fft.rfft(audio))
         
-        # Ищем обороты (15-45 Гц)
-        lower, upper = np.searchsorted(frequencies, [15, 45])
-        search_zone = amplitudes[lower:upper]
-        base_freq = frequencies[np.argmax(search_zone) + lower] if len(search_zone) > 0 else 27
+        # Обороты
+        low_idx = np.searchsorted(freqs, [15, 45])
+        search_zone = amps[low_idx[0]:low_idx[1]]
+        base_freq = freqs[np.argmax(search_zone) + low_idx[0]] if len(search_zone) > 0 else 27
         rpm = int((base_freq * 60) / 2)
-        if rpm < 600 or rpm > 1100: rpm = 820
+        if rpm < 600 or rpm > 1100: rpm = 800
 
-        # 3. Умный детектор свиста (Belt Squeal)
-        # Ищем самый громкий звук на высоких частотах (> 2000 Гц)
-        high_idx = np.searchsorted(frequencies, 2000)
-        high_noise_peak = np.max(amplitudes[high_idx:]) if len(amplitudes) > high_idx else 0
+        # 3. Детектор СВИСТА (Улучшенный)
+        high_idx = np.searchsorted(freqs, 2000)
+        high_amps = amps[high_idx:]
         
-        # Считаем средний фон (чтобы отличить реальный свист от шума)
-        average_noise = np.mean(amplitudes)
-        
-        # Диагноз: свист должен быть в 5 раз громче среднего фона и выше порога 0.15
-        if high_noise_peak > (average_noise * 5) and high_noise_peak > 0.15:
-            diag = "belt_squeal"
+        if len(high_amps) > 0:
+            peak_high = np.max(high_amps)
+            mean_high = np.mean(high_amps)
+            
+            # Коэффициент "остроты" (отношение пика к среднему шуму)
+            # У свиста этот показатель > 15-20. У шума телека он < 5.
+            sharpness = peak_high / (mean_high + 1e-6)
+            
+            # Свистит только если это громкий И острый звук
+            if peak_high > 0.2 and sharpness > 15:
+                diag = "belt_squeal"
+                prob = min(int(sharpness * 3), 98) # Вероятность зависит от остроты
+            else:
+                diag = "normal_operation"
+                prob = 95
         else:
             diag = "normal_operation"
-        
+            prob = 95
+
         return {
             "type": diag,
             "rpm": rpm,
             "probabilities": {
-                "normal_operation": 95 if diag == "normal_operation" else 15,
-                "belt_squeal": 85 if diag == "belt_squeal" else 5,
-                "valvetrain_tick": 2
+                "normal_operation": prob if diag == "normal_operation" else 10,
+                "belt_squeal": prob if diag == "belt_squeal" else 2,
+                "ambient_noise": 5
             },
-            "recommendation": "Engine sounds healthy." if diag == "normal_operation" else "High frequency squeal detected. Check the drive belt."
+            "recommendation": "Engine sounds healthy." if diag == "normal_operation" else "Sharp high-frequency squeal detected. Check belts."
         }
 
 analyzer = EngineAnalyzer()
 
 @app.route("/")
-def home():
-    return render_template("index.html")
+def home(): return render_template("index.html")
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
@@ -72,7 +80,7 @@ def analyze():
             sr = wf.getframerate()
         return jsonify(analyzer.process(audio, sr))
     except Exception as e:
-        return jsonify({"error": f"Error: {str(e)}"}), 500
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
