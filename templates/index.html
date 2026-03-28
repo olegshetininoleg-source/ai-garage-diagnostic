@@ -11,9 +11,31 @@
         h1 { color: var(--primary); font-size: 28px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
         p.subtitle { color: #888; font-size: 14px; margin-bottom: 30px; }
         
-        .upload-area { border: 2px dashed #444; padding: 30px; border-radius: 12px; cursor: pointer; transition: 0.3s; margin-bottom: 20px; }
-        .upload-area:hover { border-color: var(--primary); background: #252525; }
-        #fileLabel { font-weight: bold; display: block; word-break: break-all; }
+        /* НОВЫЙ ДИЗАЙН ЗОНЫ ЗАГРУЗКИ */
+        .upload-area { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            justify-content: center; 
+            border: 2px dashed var(--primary); 
+            background: rgba(0, 210, 255, 0.05); 
+            padding: 40px 20px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            margin-bottom: 20px; 
+        }
+        .upload-area:hover { 
+            background: rgba(0, 210, 255, 0.15); 
+            border-color: #00a8cc; 
+            transform: scale(1.02);
+        }
+        .upload-icon { font-size: 40px; margin-bottom: 15px; }
+        #fileLabel { font-weight: bold; font-size: 16px; line-height: 1.4; color: #fff; }
+        #fileSubLabel { display: block; font-size: 12px; color: #aaa; font-weight: normal; margin-top: 5px; }
+        
+        /* ЖЕЛЕЗОБЕТОННОЕ СКРЫТИЕ СТАНДАРТНОЙ КНОПКИ */
+        .hidden-input { display: none !important; opacity: 0; position: absolute; z-index: -1; }
         
         .btn { background: var(--primary); color: #000; border: none; padding: 16px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
         .btn:hover { background: #00a8cc; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,210,255,0.3); }
@@ -47,8 +69,10 @@
 
     <form id="uploadForm">
         <label class="upload-area" for="audioFile">
-            <span id="fileLabel">📁 Select Audio (WAV, AAC, MP3, M4A)</span>
-            <input type="file" id="audioFile" name="file" accept="audio/*" style="display:none" required>
+            <div class="upload-icon">🎙️</div>
+            <span id="fileLabel">Tap to Select Audio</span>
+            <span id="fileSubLabel">Supports WAV, AAC, MP3, M4A</span>
+            <input type="file" id="audioFile" name="file" accept="audio/*" class="hidden-input" required>
         </label>
         <button type="submit" id="submitBtn" class="btn">Start AI Scan</button>
     </form>
@@ -78,15 +102,18 @@
 <script>
     const fileInput = document.getElementById('audioFile');
     const fileLabel = document.getElementById('fileLabel');
+    const fileSubLabel = document.getElementById('fileSubLabel');
     const uploadForm = document.getElementById('uploadForm');
     const loading = document.getElementById('loading');
     const resultCard = document.getElementById('result-card');
 
     fileInput.onchange = (e) => {
-        if (e.target.files[0]) fileLabel.innerText = "📄 " + e.target.files[0].name;
+        if (e.target.files[0]) {
+            fileLabel.innerText = "📄 " + e.target.files[0].name;
+            fileSubLabel.style.display = 'none'; // Скрываем подсказку о форматах, когда файл выбран
+        }
     };
 
-    // Функция конвертации любого аудио в чистый WAV (16-bit PCM)
     function audioBufferToWav(buffer) {
         let numOfChan = buffer.numberOfChannels,
             length = buffer.length * numOfChan * 2 + 44,
@@ -126,24 +153,21 @@
         try {
             const file = fileInput.files[0];
             
-            // 1. Читаем и конвертируем файл в браузере
             loading.innerText = '⚡ PREPARING AUDIO FORMAT...';
             const arrayBuffer = await file.arrayBuffer();
             const audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
             const wavBlob = audioBufferToWav(audioBuffer);
 
-            // 2. Отправляем чистый WAV на сервер
             loading.innerText = '⚡ ANALYZING SPECTROMETER DATA...';
             const formData = new FormData();
-            formData.append("file", wavBlob, "converted.wav"); // Сервер думает, что это обычный WAV
+            formData.append("file", wavBlob, "converted.wav");
 
             const response = await fetch('/analyze', { method: 'POST', body: formData });
             const data = await response.json();
             
             if (data.error) throw new Error(data.error);
 
-            // 3. Рисуем результат
             document.getElementById('res-type').innerText = data.type.replace('_', ' ').toUpperCase();
             document.getElementById('res-rpm').innerText = data.rpm;
             document.getElementById('res-rec').innerText = data.recommendation;
