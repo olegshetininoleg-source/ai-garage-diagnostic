@@ -1,12 +1,6 @@
 import numpy as np
 import librosa
 
-
-def compute_spectrogram(audio, sr):
-    S = librosa.feature.melspectrogram(y=audio, sr=sr, n_mels=128)
-    return librosa.power_to_db(S, ref=np.max)
-
-
 def extract_advanced_features(audio, sr):
     features = {}
 
@@ -19,5 +13,13 @@ def extract_advanced_features(audio, sr):
 
     zcr = librosa.feature.zero_crossing_rate(audio)[0]
     features["zcr_mean"] = float(np.mean(zcr))
+
+    mfcc = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13)
+    features["mfcc_mean"] = mfcc.mean(axis=1).tolist()
+
+    S = np.abs(librosa.stft(audio))
+    flux = np.sqrt(np.sum(np.diff(S, axis=1)**2, axis=0))
+    features["flux_mean"] = float(np.mean(flux))
+    features["flux_std"] = float(np.std(flux))
 
     return features
