@@ -3,66 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI-Garage | Expert Engine Analysis</title>
+    <title>AI-Garage | Neural Engine Diagnostics</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #121212; color: #e0e0e0; display: flex; justify-content: center; min-height: 100vh; margin: 0; padding-top: 50px;}
-        .container { background: #1e1e1e; padding: 30px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); max-width: 450px; width: 100%; text-align: center; }
-        h1 { color: #00d2ff; }
-        .file-label { display: block; background: #333; padding: 20px; border: 2px dashed #555; border-radius: 8px; cursor: pointer; margin-bottom: 20px; }
-        .btn { background: #00d2ff; color: #000; border: none; padding: 15px; width: 100%; border-radius: 8px; font-weight: bold; cursor: pointer; }
-        #result-card { display: none; margin-top: 25px; text-align: left; background: #2a2a2a; padding: 20px; border-radius: 8px; border-left: 4px solid #00d2ff; }
-        .bar-container { background: #444; height: 10px; border-radius: 5px; margin-bottom: 15px; overflow: hidden; }
-        .bar-fill { height: 100%; background: #00d2ff; width: 0; transition: width 1s; }
-        .bar-fill.safe { background: #2ed573; }
-        .bar-fill.warn { background: #ff4757; }
-        .amazon-btn { display: block; background: #ff9900; color: #000; text-decoration: none; padding: 12px; border-radius: 5px; font-weight: bold; text-align: center; margin-top: 15px; }
+        :root { --primary: #00d2ff; --bg: #121212; --card: #1e1e1e; --text: #e0e0e0; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+        .container { background: var(--card); padding: 30px; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.6); max-width: 450px; width: 100%; text-align: center; border: 1px solid #333; }
+        h1 { color: var(--primary); font-size: 28px; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 2px; }
+        p.subtitle { color: #888; font-size: 14px; margin-bottom: 30px; }
+        
+        .upload-area { border: 2px dashed #444; padding: 30px; border-radius: 12px; cursor: pointer; transition: 0.3s; margin-bottom: 20px; }
+        .upload-area:hover { border-color: var(--primary); background: #252525; }
+        #fileLabel { font-weight: bold; display: block; word-break: break-all; }
+        
+        .btn { background: var(--primary); color: #000; border: none; padding: 16px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; text-transform: uppercase; }
+        .btn:hover { background: #00a8cc; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,210,255,0.3); }
+        .btn:disabled { background: #444; cursor: not-allowed; }
+
+        #result-card { display: none; margin-top: 30px; text-align: left; background: #252525; padding: 20px; border-radius: 10px; border-left: 5px solid var(--primary); animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .res-row { display: flex; justify-content: space-between; margin-bottom: 15px; font-size: 18px; }
+        .res-val { font-weight: bold; color: var(--primary); }
+
+        .bar-group { margin-top: 20px; }
+        .bar-label { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; text-transform: uppercase; color: #aaa; }
+        .bar-bg { background: #333; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 12px; }
+        .bar-fill { height: 100%; background: var(--primary); width: 0; transition: width 1s ease-out; }
+        .bar-fill.danger { background: #ff4757; }
+        .bar-fill.success { background: #2ed573; }
+
+        .advice-box { background: #1a3a4a; padding: 15px; border-radius: 8px; margin-top: 20px; border: 1px solid #2980b9; }
+        .amazon-link { display: block; background: #ff9900; color: #000; text-decoration: none; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; margin-top: 15px; transition: 0.3s; }
+        .amazon-link:hover { background: #e68a00; }
+        
+        #loading { display: none; margin: 20px 0; color: var(--primary); font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>AI-Garage</h1>
-        <p>Upload a <b>.WAV</b> file for AI diagnostics</p>
-        <form id="uploadForm">
-            <label class="file-label" for="audioFile" id="fileLabel">📁 Click to select audio</label>
-            <input type="file" id="audioFile" name="file" accept=".wav" style="display:none" required>
-            <button type="submit" class="btn">START ANALYSIS</button>
-        </form>
-        <div id="loading" style="display:none; margin-top:20px;">⏳ Analyzing...</div>
-        <div id="result-card">
-            <h3>Result: <span id="res-type" style="color:#00d2ff"></span></h3>
-            <p>Detected RPM: <b id="res-rpm"></b></p>
-            <div id="bars"></div>
-            <div style="background:#1a3a4a; padding:15px; border-radius:5px; margin-top:15px;">
-                <small>Expert Advice:</small>
-                <p id="res-rec" style="font-size:14px; margin:5px 0;"></p>
-                <a id="amazon-link" href="#" target="_blank" class="amazon-btn">Find Parts on Amazon</a>
-            </div>
+
+<div class="container">
+    <h1>AI-GARAGE</h1>
+    <p class="subtitle">Diagnostic Engine Analysis System</p>
+
+    <form id="uploadForm">
+        <label class="upload-area" for="audioFile">
+            <span id="fileLabel">📁 Select Audio (WAV, AAC, MP3, M4A)</span>
+            <input type="file" id="audioFile" name="file" accept="audio/*" style="display:none" required>
+        </label>
+        <button type="submit" id="submitBtn" class="btn">Start AI Scan</button>
+    </form>
+
+    <div id="loading">⚡ PROCESSING...</div>
+
+    <div id="result-card">
+        <div class="res-row">
+            <span>Diagnosis:</span>
+            <span id="res-type" class="res-val">-</span>
+        </div>
+        <div class="res-row">
+            <span>Estimated RPM:</span>
+            <span id="res-rpm" class="res-val">-</span>
+        </div>
+
+        <div class="bar-group" id="probability-bars"></div>
+
+        <div class="advice-box">
+            <div style="font-size: 12px; color: var(--primary); margin-bottom: 5px;">🔧 AI RECOMMENDATION:</div>
+            <div id="res-rec" style="font-size: 14px; line-height: 1.4;"></div>
+            <a id="amazon-btn" href="#" target="_blank" class="amazon-link">🛒 FIND PARTS ON AMAZON</a>
         </div>
     </div>
-    <script>
-        document.getElementById('audioFile').onchange = e => { document.getElementById('fileLabel').innerText = "📄 " + e.target.files[0].name; };
-        document.getElementById('uploadForm').onsubmit = async e => {
-            e.preventDefault();
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('result-card').style.display = 'none';
-            let formData = new FormData();
-            formData.append("file", document.getElementById('audioFile').files[0]);
-            let res = await fetch('/analyze', { method: 'POST', body: formData });
-            let data = await res.json();
-            document.getElementById('loading').style.display = 'none';
-            if(data.error) { alert(data.error); return; }
-            document.getElementById('res-type').innerText = data.type.replace('_',' ').toUpperCase();
+</div>
+
+<script>
+    const fileInput = document.getElementById('audioFile');
+    const fileLabel = document.getElementById('fileLabel');
+    const uploadForm = document.getElementById('uploadForm');
+    const loading = document.getElementById('loading');
+    const resultCard = document.getElementById('result-card');
+
+    fileInput.onchange = (e) => {
+        if (e.target.files[0]) fileLabel.innerText = "📄 " + e.target.files[0].name;
+    };
+
+    // Функция конвертации любого аудио в чистый WAV (16-bit PCM)
+    function audioBufferToWav(buffer) {
+        let numOfChan = buffer.numberOfChannels,
+            length = buffer.length * numOfChan * 2 + 44,
+            bufferWav = new ArrayBuffer(length),
+            view = new DataView(bufferWav),
+            channels = [], i, sample, offset = 0, pos = 0;
+
+        function setUint16(data) { view.setUint16(offset, data, true); offset += 2; }
+        function setUint32(data) { view.setUint32(offset, data, true); offset += 4; }
+
+        setUint32(0x46464952); setUint32(length - 8); setUint32(0x45564157);
+        setUint32(0x20746d66); setUint32(16); setUint16(1); setUint16(numOfChan);
+        setUint32(buffer.sampleRate); setUint32(buffer.sampleRate * 2 * numOfChan);
+        setUint16(numOfChan * 2); setUint16(16); setUint32(0x61746164); setUint32(length - pos - 4);
+
+        for(i = 0; i < numOfChan; i++) channels.push(buffer.getChannelData(i));
+
+        while(pos < buffer.length) {
+            for(i = 0; i < numOfChan; i++) {
+                sample = Math.max(-1, Math.min(1, channels[i][pos]));
+                sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767)|0;
+                view.setInt16(offset, sample, true);
+                offset += 2;
+            }
+            pos++;
+        }
+        return new Blob([bufferWav], {type: "audio/wav"});
+    }
+
+    uploadForm.onsubmit = async (e) => {
+        e.preventDefault();
+        
+        loading.style.display = 'block';
+        resultCard.style.display = 'none';
+        document.getElementById('submitBtn').disabled = true;
+
+        try {
+            const file = fileInput.files[0];
+            
+            // 1. Читаем и конвертируем файл в браузере
+            loading.innerText = '⚡ PREPARING AUDIO FORMAT...';
+            const arrayBuffer = await file.arrayBuffer();
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+            const wavBlob = audioBufferToWav(audioBuffer);
+
+            // 2. Отправляем чистый WAV на сервер
+            loading.innerText = '⚡ ANALYZING SPECTROMETER DATA...';
+            const formData = new FormData();
+            formData.append("file", wavBlob, "converted.wav"); // Сервер думает, что это обычный WAV
+
+            const response = await fetch('/analyze', { method: 'POST', body: formData });
+            const data = await response.json();
+            
+            if (data.error) throw new Error(data.error);
+
+            // 3. Рисуем результат
+            document.getElementById('res-type').innerText = data.type.replace('_', ' ').toUpperCase();
             document.getElementById('res-rpm').innerText = data.rpm;
             document.getElementById('res-rec').innerText = data.recommendation;
-            document.getElementById('amazon-link').href = "https://www.amazon.com/s?k=" + data.type.replace('_','+') + "+repair+parts";
-            let barsHtml = '';
-            for (const [name, val] of Object.entries(data.probabilities)) {
-                let color = (name === 'normal_operation') ? 'safe' : (val > 50 ? 'warn' : '');
-                barsHtml += `<small>${name.replace('_',' ')}: ${val}%</small><div class="bar-container"><div class="bar-fill ${color}" style="width:${val}%"></div></div>`;
+
+            const query = data.type === 'normal_operation' ? 'car+engine+maintenance' : data.type.replace('_', '+');
+            document.getElementById('amazon-btn').href = `https://www.amazon.com/s?k=${query}+repair+parts`;
+
+            const barsContainer = document.getElementById('probability-bars');
+            barsContainer.innerHTML = '';
+            
+            for (const [name, prob] of Object.entries(data.probabilities)) {
+                const colorClass = name === 'normal_operation' ? 'success' : (prob > 40 ? 'danger' : '');
+                const cleanName = name.replace('_', ' ');
+                barsContainer.innerHTML += `
+                    <div class="bar-label"><span>${cleanName}</span><span>${prob}%</span></div>
+                    <div class="bar-bg"><div class="bar-fill ${colorClass}" style="width: ${prob}%"></div></div>
+                `;
             }
-            document.getElementById('bars').innerHTML = barsHtml;
-            document.getElementById('result-card').style.display = 'block';
-        };
-    </script>
+
+            resultCard.style.display = 'block';
+        } catch (err) {
+            alert("Error: " + err.message + " (Make sure it's a valid audio file)");
+        } finally {
+            loading.style.display = 'none';
+            document.getElementById('submitBtn').disabled = false;
+        }
+    };
+</script>
+
 </body>
 </html>
