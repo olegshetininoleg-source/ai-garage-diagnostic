@@ -110,7 +110,7 @@
     fileInput.onchange = (e) => {
         if (e.target.files[0]) {
             fileLabel.innerText = "📄 " + e.target.files[0].name;
-            fileSubLabel.style.display = 'none'; // Скрываем подсказку о форматах, когда файл выбран
+            fileSubLabel.style.display = 'none';
         }
     };
 
@@ -172,8 +172,13 @@
             document.getElementById('res-rpm').innerText = data.rpm;
             document.getElementById('res-rec').innerText = data.recommendation;
 
-            const query = data.type === 'normal_operation' ? 'car+engine+maintenance' : data.type.replace('_', '+');
-            document.getElementById('amazon-btn').href = `https://www.amazon.com/s?k=${query}+repair+parts`;
+            // ЗДЕСЬ МАГИЯ: берем готовую ссылку от сервера с твоим партнерским ID
+            if (data.amazon_link) {
+                document.getElementById('amazon-btn').href = data.amazon_link;
+                document.getElementById('amazon-btn').style.display = 'block';
+            } else {
+                document.getElementById('amazon-btn').style.display = 'none';
+            }
 
             const barsContainer = document.getElementById('probability-bars');
             barsContainer.innerHTML = '';
