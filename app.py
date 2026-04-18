@@ -45,7 +45,7 @@ def echo_all(message):
 
 
 # ==========================================
-# ⚙️ НАСТРОЙКИ СЕРВЕРА И НЕЙРОСЕТИ (ТВОЙ СТАРЫЙ КОД)
+# ⚙️ НАСТРОЙКИ СЕРВЕРА И НЕЙРОСЕТИ
 # ==========================================
 app = Flask(__name__)
 
@@ -63,6 +63,7 @@ class EngineAnalyzer:
         rms = np.sqrt(np.mean(audio ** 2))
         if rms < 0.03:
             return {"type": "low_signal", "rpm": 0, "probabilities": { "normal_operation": 0, "belt_squeal": 0, "valve_clatter": 0 }, "recommendation": "Audio signal too low. Please hold your device closer to the engine block."}
+        
         filtered = self.bandpass_filter(audio, sr)
         k = kurtosis(filtered)
         env = self.compute_envelope(filtered)
@@ -70,31 +71,54 @@ class EngineAnalyzer:
         freqs = np.fft.rfftfreq(len(audio), d=1 / sr)
         amps = np.abs(np.fft.rfft(audio))
         low_zone = (freqs >= 15) & (freqs <= 50)
+        
         if np.any(low_zone):
             base_freq = freqs[low_zone][np.argmax(amps[low_zone])]
             rpm = int((base_freq * 60) / 2)
         else:
             rpm = 800
-        if rpm < 500 or rpm > 1200: rpm = 825
+        
+        if rpm < 500 or rpm > 1200: 
+            rpm = 825
+            
         score_knock = min(max(k, 0) / 5, 0.5) 
         score_knock += min(peak_count / 1000, 0.5)
         prob_knock = int(score_knock * 100)
+        
         high_idx = np.searchsorted(freqs, 2000)
         high_energy = np.max(amps[high_idx:]) if len(amps[high_idx:]) > 0 else 0
         snr_ratio = high_energy / (np.mean(amps) + 1e-9)
         prob_squeal = 0
+        
         if snr_ratio > 15 and high_energy > 0.2:
             prob_squeal = min(int((snr_ratio / 40) * 100), 95)
+            
         prob_normal = max(100 - prob_knock - prob_squeal, 5)
+        
         diag_type = "normal_operation"
         rec = "Normal engine operation. No critical noises detected."
+        amazon_query = "obd2+scanner+diagnostic+tool"
+        
         if prob_knock > 45 and prob_knock > prob_squeal:
             diag_type = "valve_clatter"
             rec = "Metallic knocking detected. Inspect hydraulic lifters or valve clearances."
+            amazon_query = "hydraulic+lifter+additive+treatment"
         elif prob_squeal > 45:
             diag_type = "belt_squeal"
             rec = "High-frequency squeal detected. Check serpentine/alternator belt tension."
-        return {"type": diag_type, "rpm": rpm, "probabilities": {"normal_operation": prob_normal, "belt_squeal": prob_squeal, "valve_clatter": prob_knock}, "recommendation": rec}
+            amazon_query = "serpentine+belt+conditioner+spray"
+
+        # Формируем твою личную партнерскую ссылку
+        affiliate_tag = "amazon014e11-20"
+        amazon_link = f"https://www.amazon.com/s?k={amazon_query}&tag={affiliate_tag}"
+
+        return {
+            "type": diag_type, 
+            "rpm": rpm, 
+            "probabilities": {"normal_operation": prob_normal, "belt_squeal": prob_squeal, "valve_clatter": prob_knock}, 
+            "recommendation": rec,
+            "amazon_link": amazon_link
+        }
 
 analyzer = EngineAnalyzer()
 
