@@ -62,7 +62,7 @@ class EngineAnalyzer:
     def process(self, audio, sr=22050):
         rms = np.sqrt(np.mean(audio ** 2))
         if rms < 0.03:
-            return {"type": "low_signal", "rpm": 0, "probabilities": { "normal_operation": 0, "belt_squeal": 0, "valve_clatter": 0 }, "recommendation": "Запись слишком тихая. Поднесите телефон ближе к двигателю."}
+            return {"type": "low_signal", "rpm": 0, "probabilities": { "normal_operation": 0, "belt_squeal": 0, "valve_clatter": 0 }, "recommendation": "Audio signal too low. Please hold your device closer to the engine block."}
         filtered = self.bandpass_filter(audio, sr)
         k = kurtosis(filtered)
         env = self.compute_envelope(filtered)
@@ -87,13 +87,13 @@ class EngineAnalyzer:
             prob_squeal = min(int((snr_ratio / 40) * 100), 95)
         prob_normal = max(100 - prob_knock - prob_squeal, 5)
         diag_type = "normal_operation"
-        rec = "Двигатель работает нормально. Критических шумов нет."
+        rec = "Normal engine operation. No critical noises detected."
         if prob_knock > 45 and prob_knock > prob_squeal:
             diag_type = "valve_clatter"
-            rec = "Обнаружен металлический стук (возможно, гидрокомпенсаторы или клапана)."
+            rec = "Metallic knocking detected. Inspect hydraulic lifters or valve clearances."
         elif prob_squeal > 45:
             diag_type = "belt_squeal"
-            rec = "Обнаружен высокочастотный свист. Проверьте натяжение ремня генератора."
+            rec = "High-frequency squeal detected. Check serpentine/alternator belt tension."
         return {"type": diag_type, "rpm": rpm, "probabilities": {"normal_operation": prob_normal, "belt_squeal": prob_squeal, "valve_clatter": prob_knock}, "recommendation": rec}
 
 analyzer = EngineAnalyzer()
@@ -115,7 +115,7 @@ def analyze():
             sr = wf.getframerate()
         return jsonify(analyzer.process(audio, sr))
     except Exception as e:
-        return jsonify({"error": f"Ошибка чтения файла: {str(e)}"}), 500
+        return jsonify({"error": f"Error reading file: {str(e)}"}), 500
 
 # ==========================================
 # 🌐 МАГИЯ WEBHOOK (СВЯЗЬ ТЕЛЕГРАМА И СЕРВЕРА)
